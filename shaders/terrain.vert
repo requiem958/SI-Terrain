@@ -14,7 +14,7 @@ uniform float time;
 // out variables 
 out vec3 normalView;
 out vec3 eyeView;
-
+out vec3 p;
 // fonctions utiles pour créer des terrains en général
 vec2 hash(vec2 p) {
   p = vec2( dot(p,vec2(127.1,311.7)),
@@ -83,7 +83,7 @@ void main() {
   float h = computeHeight(position.xy);
   vec3  n = computeNormal(position.xy);
   
-  vec3 p = vec3(position.xy,h);
+  p = vec3(position.xy,h);
   
   gl_Position =  projMat*mdvMat*vec4(p,1);
   normalView  = normalize(normalMat*n);
