@@ -56,6 +56,7 @@ class Viewer : public QGLWidget {
   Camera *_cam;    // the camera
 
   glm::vec3 _light;  // light direction
+  float _time; //faire bouger la lumière selon le temps
   glm::vec3 _motion; // motion offset for the noise texture 
   bool      _mode;   // camera motion or light motion
 

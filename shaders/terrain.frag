@@ -3,6 +3,7 @@
 // input uniforms 
 uniform vec3 light;
 uniform vec3 motion;
+uniform float time;
 
 // in variables 
 in vec3  normalView;
@@ -20,6 +21,8 @@ void main() {
   vec3 n = normalize(normalView);
   vec3 e = normalize(eyeView);
   vec3 l = normalize(light);
+  l.x += sin(2*time);
+  l = normalize(l);
 
   float diff = dot(l,n);
   float spec = pow(max(dot(reflect(l,n),e),0.0),et);

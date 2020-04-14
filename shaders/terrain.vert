@@ -9,6 +9,7 @@ uniform mat4 projMat;     // projection matrix
 uniform mat3 normalMat;   // normal matrix
 uniform vec3 light;
 uniform vec3 motion;
+uniform float time;
 
 // out variables 
 out vec3 normalView;
@@ -51,7 +52,7 @@ float pnoise(in vec2 p,in float amplitude,in float frequency,in float persistenc
 float computeHeight(in vec2 p) {
       //perlin
 
-  return pnoise(p+sin(motion.x),2,1,0.4,20);
+  return pnoise(p,2,1,0.4,20);
   // version plan
   //return 0.0;
   

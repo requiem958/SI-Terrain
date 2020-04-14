@@ -10,6 +10,7 @@ Viewer::Viewer(char *,const QGLFormat &format)
   : QGLWidget(format),
     _timer(new QTimer(this)),
     _light(glm::vec3(0,0,1)),
+    _time(0.0),
     _motion(glm::vec3(0,0,0)),
     _mode(false),
     _ndResol(512) {
@@ -71,7 +72,7 @@ void Viewer::reloadShaders() {
     _terrainShader->reload("shaders/terrain.vert","shaders/terrain.frag");
 }
 
-
+#define STEP 0.01
 void Viewer::drawScene(GLuint id) {
 
   // send uniform variables 
@@ -79,12 +80,14 @@ void Viewer::drawScene(GLuint id) {
   glUniformMatrix4fv(glGetUniformLocation(id,"projMat"),1,GL_FALSE,&(_cam->projMatrix()[0][0]));
   glUniformMatrix3fv(glGetUniformLocation(id,"normalMat"),1,GL_FALSE,&(_cam->normalMatrix()[0][0]));
   glUniform3fv(glGetUniformLocation(id,"light"),1,&(_light[0]));
+  glUniform1f(glGetUniformLocation(id,"time"),_time);
   glUniform3fv(glGetUniformLocation(id,"motion"),1,&(_motion[0]));
 
   // draw faces 
   glBindVertexArray(_vaoTerrain);
   glDrawElements(GL_TRIANGLES,3*_grid->nbFaces(),GL_UNSIGNED_INT,(void *)0);
   glBindVertexArray(0);
+  _time += STEP;
 }
 
 void Viewer::paintGL() {
@@ -166,8 +169,12 @@ void Viewer::keyPressEvent(QKeyEvent *ke) {
 
   if(ke->key()==Qt::Key_S) {
     glm::vec2 v = glm::vec2(glm::transpose(_cam->normalMatrix())*glm::vec3(0,0,-1))*step;
-    if(v[0]!=0.0 && v[1]!=0.0) v = glm::normalize(v)*step;
-    else v = glm::vec2(0,1)*step;
+    if(v[0]!=0.0 && v[1]!=0.0){
+      v = glm::normalize(v)*step;
+    }
+    else {
+      v = glm::vec2(0,1)*step;
+    }
     _motion[0] -= v[0];
     _motion[1] -= v[1];
   }
