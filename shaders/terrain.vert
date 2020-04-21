@@ -4,6 +4,7 @@
 layout(location = 0) in vec3 position; 
 
 // input uniforms
+
 uniform mat4 mdvMat;      // modelview matrix 
 uniform mat4 projMat;     // projection matrix
 uniform mat3 normalMat;   // normal matrix
@@ -11,11 +12,17 @@ uniform vec3 light;
 uniform vec3 motion;
 uniform float time;
 
+//We must have water_low < flow_low < flow_high < 0
+uniform float water_low; 
+uniform float flow_low; 
+uniform float flow_high; 
+
 // out variables 
 
 out vec3 normalView;
 out vec3 eyeView;
 out vec3 p; //Le vecteur position de chaque pixel
+out float flow_altitude; //hauteur des vagues
 
 // fonctions utiles pour créer des terrains en général
 vec2 hash(vec2 p) {
@@ -55,8 +62,10 @@ float computeHeight(in vec2 p) {
   //perlin basique
 
   float h = pnoise(p,3,1,0.4,20);
-  if (h < -0.5)
-    h = -0.5;
+
+  //Plat en dessous de l'eau
+  h = max(h,water_low);
+  flow_altitude = flow_high+sin(10*time+100*p.x*p.y)*abs(flow_low-flow_high);
   return h;
   // version plan
    //return 0;

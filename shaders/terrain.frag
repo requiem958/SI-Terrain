@@ -1,15 +1,23 @@
 #version 330
 
-// input uniforms 
+// input uniforms
+
 uniform vec3 light;
 uniform vec3 motion;
 uniform float time;
+uniform float water_low; 
+uniform float flow_low; 
+uniform float flow_high; 
 
 // in variables 
+
 in vec3  normalView;
 in vec3  eyeView;
 in vec3  p;
+in float flow_altitude;
+
 // out buffers 
+
 layout(location = 0) out vec4 outColor;
 
 void main() {
@@ -34,9 +42,9 @@ void main() {
 
   float altitude = p.z;
 
-  if (altitude <= -0.2){
-    a = ambient_water;
-    }
+  if (altitude <= flow_altitude){
+    a = mix(ambient_water,vec3(0,0,0),l.x);
+  }
   else if (altitude <= 1.0 / 3.0){
      a = ambient_sol;
   }else if (altitude >= 2.5/3){

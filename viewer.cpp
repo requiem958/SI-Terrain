@@ -82,6 +82,10 @@ void Viewer::drawScene(GLuint id) {
   glUniform3fv(glGetUniformLocation(id,"light"),1,&(_light[0]));
   glUniform1f(glGetUniformLocation(id,"time"),_time);
   glUniform3fv(glGetUniformLocation(id,"motion"),1,&(_motion[0]));
+  //Water parameters
+  glUniform1f(glGetUniformLocation(id,"water_low"),-0.5);
+  glUniform1f(glGetUniformLocation(id,"flow_low"),-0.21);
+  glUniform1f(glGetUniformLocation(id,"flow_high"),-0.2);
 
   // draw faces 
   glBindVertexArray(_vaoTerrain);
