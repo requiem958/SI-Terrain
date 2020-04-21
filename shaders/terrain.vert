@@ -12,9 +12,11 @@ uniform vec3 motion;
 uniform float time;
 
 // out variables 
+
 out vec3 normalView;
 out vec3 eyeView;
-out vec3 p;
+out vec3 p; //Le vecteur position de chaque pixel
+
 // fonctions utiles pour créer des terrains en général
 vec2 hash(vec2 p) {
   p = vec2( dot(p,vec2(127.1,311.7)),
@@ -50,17 +52,20 @@ float pnoise(in vec2 p,in float amplitude,in float frequency,in float persistenc
 
 
 float computeHeight(in vec2 p) {
-      //perlin
+  //perlin basique
 
-  return pnoise(p,2,1,0.4,20);
+  float h = pnoise(p,3,1,0.4,20);
+  if (h < -0.5)
+    h = -0.5;
+  return h;
   // version plan
-  //return 0.0;
+   //return 0;
   
   // version sinus statique
   //return 0.2*sin(p.x*30);
 
   // version sinus animé 
-  //  return 0.2*cos(p.x+motion.x)*sin((p.x+motion.x)*30);
+    return 0.2*cos(p.x+motion.x)*sin((p.x+motion.x)*30);
 }
 
 
@@ -80,8 +85,9 @@ vec3 computeNormal(in vec2 p) {
 
 void main() {
 
-  float h = computeHeight(position.xy);
-  vec3  n = computeNormal(position.xy);
+  vec3 mpos = position+motion;
+  float h = computeHeight(mpos.xy);
+  vec3  n = computeNormal(mpos.xy);
   
   p = vec3(position.xy,h);
   
