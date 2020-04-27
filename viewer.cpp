@@ -144,7 +144,7 @@ void Viewer::drawScene(GLuint id) {
   glBindVertexArray(_vaoTerrain);
   glDrawElements(GL_TRIANGLES,3*_grid->nbFaces(),GL_UNSIGNED_INT,(void *)0);
   glBindVertexArray(0);
-  //_time += STEP;
+  _time += 0.01;
 }
 
 void Viewer::paintGL() {

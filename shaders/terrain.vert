@@ -63,12 +63,12 @@ float pnoise(in vec2 p,in float amplitude,in float frequency,in float persistenc
 float computeHeight(in vec2 p) {
   //perlin basique
 
-  max_altitude = 1.0;
+  max_altitude = 3.0;
   float h = pnoise(p+motion.xy,max_altitude,0.2,0.5,5);
 
   //Plat en dessous de l'eau
-  //h = max(h,water_low);
-  //flow_altitude = flow_high+sin(10*time+100*p.x*p.y)*abs(flow_low-flow_high);
+  h = max(h,water_low);
+  flow_altitude = flow_high+sin(10*time+100*p.x*p.y)*abs(flow_low-flow_high);
   return h;
   // version plan
    //return 0;

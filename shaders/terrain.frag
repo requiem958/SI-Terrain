@@ -38,7 +38,7 @@ void main() {
   vec3 n = normalize(normalView);
   vec3 e = normalize(eyeView);
   vec3 l = normalize(light);
-  //l.x += sin(2*time);
+  l.x += sin(2*time);
   l = normalize(l);
   float diff = dot(l,n);
   float spec = pow(max(dot(reflect(l,n),e),0.0),et);
@@ -51,7 +51,7 @@ void main() {
   const float max_foret = 1.0/division;
 
   //Water
-  /*if (altitude <= flow_altitude){
+  if (altitude <= flow_altitude){
     a = mix(ambient_water,vec3(0,0,0),l.x);
   }
   else {
@@ -63,8 +63,8 @@ void main() {
     }else{
       a = mix(ambient_sol,ambient_forest,(altitude-min_foret)*division);
     }
-  }*/
+  }
   vec3 color = a + diff*diffuse + spec*specular;
 
-  outColor = vec4(normalView,1.0);
+  outColor = vec4(color,1.0);
 }

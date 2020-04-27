@@ -19,7 +19,7 @@ char *getFilename(int ,char **argv) {
 
 int main(int argc,char** argv) {
   QApplication application(argc,argv);
-
+  
   QGLFormat fmt;
   fmt.setVersion(3,3);
   fmt.setProfile(QGLFormat::CoreProfile);
