@@ -144,7 +144,7 @@ void Viewer::drawScene(GLuint id) {
   glBindVertexArray(_vaoTerrain);
   glDrawElements(GL_TRIANGLES,3*_grid->nbFaces(),GL_UNSIGNED_INT,(void *)0);
   glBindVertexArray(0);
-  _time += STEP;
+  //_time += STEP;
 }
 
 void Viewer::paintGL() {
@@ -237,11 +237,11 @@ void Viewer::keyPressEvent(QKeyEvent *ke) {
   }
 
   if(ke->key()==Qt::Key_Q) {
-    _motion[1] += step;
+    _motion[2] += step;
   }
 
   if(ke->key()==Qt::Key_D) {
-    _motion[1] -= step;
+    _motion[2] -= step;
   }
 
   

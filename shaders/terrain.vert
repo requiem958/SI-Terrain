@@ -22,6 +22,7 @@ uniform float flow_high;
 out vec3 normalView;
 out vec3 eyeView;
 out vec3 p; //Le vecteur position de chaque pixel
+out vec3 mpos; 
 out float flow_altitude; //hauteur des vagues
 out float max_altitude; //hauteur maximum des montagnes
 
@@ -62,12 +63,12 @@ float pnoise(in vec2 p,in float amplitude,in float frequency,in float persistenc
 float computeHeight(in vec2 p) {
   //perlin basique
 
-  max_altitude = 3;
-  float h = pnoise(p,max_altitude,0.2,0.5,11);
+  max_altitude = 1.0;
+  float h = pnoise(p+motion.xy,max_altitude,0.2,0.5,5);
 
   //Plat en dessous de l'eau
-  h = max(h,water_low);
-  flow_altitude = flow_high+sin(10*time+100*p.x*p.y)*abs(flow_low-flow_high);
+  //h = max(h,water_low);
+  //flow_altitude = flow_high+sin(10*time+100*p.x*p.y)*abs(flow_low-flow_high);
   return h;
   // version plan
    //return 0;
@@ -76,7 +77,7 @@ float computeHeight(in vec2 p) {
   //return 0.2*sin(p.x*30);
 
   // version sinus animé 
-    return 0.2*cos(p.x+motion.x)*sin((p.x+motion.x)*30);
+    //return 0.2*cos(p.x+motion.x)*sin((p.x+motion.x)*30);
 }
 
 
@@ -96,9 +97,9 @@ vec3 computeNormal(in vec2 p) {
 
 void main() {
 
-  vec3 mpos = position+motion;
-  float h = computeHeight(mpos.xy);
-  vec3  n = computeNormal(mpos.xy);
+  mpos = position+motion;
+  float h = computeHeight(position.xy);
+  vec3  n = computeNormal(position.xy);
   
   p = vec3(position.xy,h);
   
