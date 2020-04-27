@@ -23,6 +23,7 @@ out vec3 normalView;
 out vec3 eyeView;
 out vec3 p; //Le vecteur position de chaque pixel
 out float flow_altitude; //hauteur des vagues
+out float max_altitude; //hauteur maximum des montagnes
 
 // fonctions utiles pour créer des terrains en général
 vec2 hash(vec2 p) {
@@ -61,7 +62,8 @@ float pnoise(in vec2 p,in float amplitude,in float frequency,in float persistenc
 float computeHeight(in vec2 p) {
   //perlin basique
 
-  float h = pnoise(p,3,1,0.4,20);
+  max_altitude = 3;
+  float h = pnoise(p,max_altitude,0.2,0.5,11);
 
   //Plat en dessous de l'eau
   h = max(h,water_low);

@@ -3,6 +3,7 @@
 #include <math.h>
 #include <iostream>
 #include <QTime>
+#include <QImage>
 
 using namespace std;
 
@@ -17,7 +18,7 @@ Viewer::Viewer(char *,const QGLFormat &format)
 
   setlocale(LC_ALL,"C");
 
-  _grid = new Grid(_ndResol,-1.0f,1.0f);
+  _grid = new Grid(_ndResol,-10.0f,10.0f);
   _cam  = new Camera(1.0f,glm::vec3(0.0f,0.0f,0.0f));
 
   _timer->setInterval(10);
@@ -31,7 +32,9 @@ Viewer::~Viewer() {
 
   // delete all GPU objects
   deleteShaders();
-  deleteVAO(); 
+  deleteVAO();
+
+  deleteTextures();
 }
 
 void Viewer::createVAO() {
@@ -72,6 +75,53 @@ void Viewer::reloadShaders() {
     _terrainShader->reload("shaders/terrain.vert","shaders/terrain.frag");
 }
 
+void Viewer::createTextures() {
+ 
+  
+  // enable the use of 2D textures 
+  glEnable(GL_TEXTURE_2D);
+
+  
+  // create three textures on the GPU
+  glGenTextures(3,_texIds);
+
+  // load and enable all textures (CPU side)
+  enableTexture("textures/forest.jpg",_texIds[0]);
+  enableTexture("textures/sol.jpg",_texIds[1]);
+  enableTexture("textures/snow.jpg",_texIds[2]);  
+}
+
+void Viewer::enableTexture(const char * filename, int tex_id){
+   QImage texture = QGLWidget::convertToGLFormat(QImage(filename)); 
+  // activate color texture
+  glBindTexture(GL_TEXTURE_2D,tex_id);
+
+  // set texture parameters 
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); 
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);
+
+  // transfer data from CPU to GPU memory
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,
+	       texture.width(),texture.height(),0,
+  	       GL_RGBA,GL_UNSIGNED_BYTE,
+	       (const GLvoid *)texture.bits());
+  // generate mipmaps 
+  glGenerateMipmap(GL_TEXTURE_2D);
+}
+
+void Viewer::deleteTextures() {
+  glDeleteTextures(3,_texIds);
+}
+
+//Helper to send a texture to graphic card
+void Viewer::sendTexture(const char * varname, int texid,GLenum texture, GLuint shader_id){
+  glActiveTexture(texture);
+  glBindTexture(GL_TEXTURE_2D,_texIds[texid]);
+  glUniform1i(glGetUniformLocation(shader_id,varname),texid);
+}
+
 #define STEP 0.01
 void Viewer::drawScene(GLuint id) {
 
@@ -87,6 +137,9 @@ void Viewer::drawScene(GLuint id) {
   glUniform1f(glGetUniformLocation(id,"flow_low"),-0.21);
   glUniform1f(glGetUniformLocation(id,"flow_high"),-0.2);
 
+  sendTexture("forest",0,GL_TEXTURE0,id);
+  sendTexture("sol",1,GL_TEXTURE1,id);
+  sendTexture("snow",2,GL_TEXTURE2,id);
   // draw faces 
   glBindVertexArray(_vaoTerrain);
   glDrawElements(GL_TRIANGLES,3*_grid->nbFaces(),GL_UNSIGNED_INT,(void *)0);
@@ -184,11 +237,11 @@ void Viewer::keyPressEvent(QKeyEvent *ke) {
   }
 
   if(ke->key()==Qt::Key_Q) {
-    _motion[2] += step;
+    _motion[1] += step;
   }
 
   if(ke->key()==Qt::Key_D) {
-    _motion[2] -= step;
+    _motion[1] -= step;
   }
 
   
@@ -262,6 +315,7 @@ void Viewer::initializeGL() {
 
   // init VAO/VBO
   createVAO();
+  createTextures();
 
   // starts the timer 
   //_timer->start();

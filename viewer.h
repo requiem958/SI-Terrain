@@ -46,7 +46,15 @@ class Viewer : public QGLWidget {
   void createShaders();
   void deleteShaders();
   void reloadShaders();
-  
+
+  void createFBO();
+  void deleteFBO();
+  void initFBO();
+
+  void createTextures();
+  void enableTexture(const char *filename, int tex_id);
+  void deleteTextures();
+  void sendTexture(const char * varname, int texid,GLenum texture, GLuint shader_id);
   // drawing functions 
   void drawScene(GLuint id);
 
@@ -62,12 +70,18 @@ class Viewer : public QGLWidget {
 
   // les shaders 
   Shader *_terrainShader;
+  //  Shader *_shaderFirstPass; // shader pour la géométrie fbo
+  // Shader *_shaderSecondPass; // shader pour la lumière
   
   // vbo/vao ids 
   GLuint _vaoTerrain;
   GLuint _terrain[2];
 
   unsigned int _ndResol;
+
+  //GLuint _fbo;
+  //Gluint _rendColorId;
+   GLuint _texIds[3];
 };
 
 #endif // VIEWER_H
