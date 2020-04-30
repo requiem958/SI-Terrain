@@ -4,29 +4,11 @@
 layout(location = 0) in vec3 position; 
 
 // input uniforms
-
-uniform mat4 mdvMat;      // modelview matrix 
-uniform mat4 projMat;     // projection matrix
-uniform mat3 normalMat;   // normal matrix
-uniform mat4 mvpDepthMat; //mvp depth matrix
-uniform vec3 light;
+uniform mat4 mvpMat;
 uniform vec3 motion;
-uniform float time;
 
 //We must have water_low < flow_low < flow_high < 0
-uniform float water_low; 
-uniform float flow_low; 
-uniform float flow_high; 
-
-// out variables 
-
-out vec3 normalView;
-out vec3 eyeView;
-out vec4 shadcoord;
-out vec3 p; //Le vecteur position de chaque pixel
-out vec3 mpos; 
-out float flow_altitude; //hauteur des vagues
-out float max_altitude; //hauteur maximum des montagnes
+uniform float water_low;
 
 // fonctions utiles pour créer des terrains en général
 vec2 hash(vec2 p) {
@@ -65,12 +47,11 @@ float pnoise(in vec2 p,in float amplitude,in float frequency,in float persistenc
 float computeHeight(in vec2 p) {
   //perlin basique
 
-  max_altitude = 3.0;
+  float max_altitude = 3.0;
   float h = pnoise(p+motion.xy,max_altitude,0.2,0.5,5);
 
   //Plat en dessous de l'eau
   h = max(h,water_low);
-  flow_altitude = flow_high+sin(10*time+100*p.x*p.y)*abs(flow_low-flow_high);
   return h;
   // version plan
    return 0;
@@ -98,15 +79,8 @@ vec3 computeNormal(in vec2 p) {
 }
 
 void main() {
-
-  mpos = position+motion;
   float h = computeHeight(position.xy);
-  vec3  n = computeNormal(position.xy);
   
-  p = vec3(position.xy,h);
-  
-  gl_Position =  projMat*mdvMat*vec4(p,1.0);
-  shadcoord   = (mvpDepthMat*vec4(p,1.0))*0.5+vec4(0.5);
-  normalView  = normalize(normalMat*n);
-  eyeView     = normalize((mdvMat*vec4(p,1.0)).xyz);
+  vec3 p = vec3(position.xy,h);
+  gl_Position =  mvpMat*vec4(p,1);
 }

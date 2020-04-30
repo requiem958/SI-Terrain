@@ -14,7 +14,9 @@ Viewer::Viewer(char *,const QGLFormat &format)
     _time(0.0),
     _motion(glm::vec3(0,0,0)),
     _mode(false),
-    _ndResol(512) {
+    _showShadowMap(false),
+    _ndResol(512),
+    _depthResol(1024){
 
   setlocale(LC_ALL,"C");
 
@@ -32,16 +34,27 @@ Viewer::~Viewer() {
 
   // delete all GPU objects
   deleteShaders();
-  deleteVAO();
-
   deleteTextures();
+  deleteVAO();
+  deleteFBO();
 }
 
+/***
+ * VAO THINGS
+ *
+ */
+
 void Viewer::createVAO() {
+
+    // data associated with the screen quad
+  const GLfloat quadData[] = { 
+    -1.0f,-1.0f,0.0f, 1.0f,-1.0f,0.0f, -1.0f,1.0f,0.0f, -1.0f,1.0f,0.0f, 1.0f,-1.0f,0.0f, 1.0f,1.0f,0.0f
+  }; 
   // cree les buffers associés au terrain 
 
   glGenBuffers(2,_terrain);
   glGenVertexArrays(1,&_vaoTerrain);
+  glGenVertexArrays(1,&_vaoQuad);
 
   // create the VBO associated with the grid (the terrain)
   glBindVertexArray(_vaoTerrain);
@@ -50,30 +63,108 @@ void Viewer::createVAO() {
   glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,0,(void *)0);
   glEnableVertexAttribArray(0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,_terrain[1]); // indices 
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,_grid->nbFaces()*3*sizeof(int),_grid->faces(),GL_STATIC_DRAW); 
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,_grid->nbFaces()*3*sizeof(int),_grid->faces(),GL_STATIC_DRAW);
+
+    // create the VBO associated with the screen quad 
+  glGenBuffers(1,&_quad);
+  glBindVertexArray(_vaoQuad);
+  glBindBuffer(GL_ARRAY_BUFFER,_quad);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(quadData),quadData,GL_STATIC_DRAW);
+  glVertexAttribPointer(0,3,GL_FLOAT,GL_FALSE,0,(void *)0);
+  glEnableVertexAttribArray(0);
+
+  
+  glBindVertexArray(0);
 }
 
 void Viewer::deleteVAO() {
   glDeleteBuffers(2,_terrain);
   glDeleteVertexArrays(1,&_vaoTerrain);
+  
+  glDeleteBuffers(1,&_quad);
+  glDeleteVertexArrays(1,&_vaoQuad);
+  
 }
+/***
+ * FBO THINGS
+ *
+ */
+
+void Viewer::createFBO() {
+  // generate fbo and associated textures
+  glGenFramebuffers(1,&_fbo);
+  glGenTextures(1,&_texDepth);
+
+  // create the texture for rendering depth values
+  glBindTexture(GL_TEXTURE_2D,_texDepth);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT24,_depthResol,_depthResol,0,GL_DEPTH_COMPONENT,GL_FLOAT,NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
+
+  // attach textures to framebuffer object 
+  glBindFramebuffer(GL_FRAMEBUFFER,_fbo);
+  glBindTexture(GL_TEXTURE_2D,_texDepth);
+  glFramebufferTexture2D(GL_FRAMEBUFFER_EXT,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,_texDepth,0);
+
+  // test if everything is ok
+  if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    cout << "Warning: FBO not complete!" << endl;
+
+  // disable FBO
+  glBindFramebuffer(GL_FRAMEBUFFER,0);
+}
+
+void Viewer::initFBO(){
+}
+
+void Viewer::deleteFBO() {
+  // delete all FBO Ids
+  glDeleteFramebuffers(1,&_fbo);
+  glDeleteTextures(1,&_texDepth);
+}
+
+/***
+ * SHADER THINGS
+ *
+ */
 
 void Viewer::createShaders() {
   _terrainShader = new Shader();
-  
+  _shadowMapShader = new Shader(); // will create the shadow map
+  _debugMapShader = new Shader();
+
   _terrainShader->load("shaders/terrain.vert","shaders/terrain.frag");
+  _shadowMapShader->load("shaders/shadow-map.vert","shaders/shadow-map.frag");
+  _debugMapShader->load("shaders/show-shadow-map.vert","shaders/show-shadow-map.frag");
 }
 
 void Viewer::deleteShaders() {
   delete _terrainShader;
+  delete _shadowMapShader;
+  delete _debugMapShader;
 
   _terrainShader = NULL;
+  _shadowMapShader = NULL;
+  _debugMapShader = NULL;
 }
 
 void Viewer::reloadShaders() {
   if(_terrainShader)
     _terrainShader->reload("shaders/terrain.vert","shaders/terrain.frag");
+  if(_shadowMapShader)
+    _shadowMapShader->reload("shaders/shadow-map.vert","shaders/shadow-map.frag");
+  if(_debugMapShader)
+    _debugMapShader->reload("shaders/show-shadow-map.vert","shaders/show-shadow-map.frag");
 }
+
+/***
+ * TEXTURE THINGS
+ *
+ */
 
 void Viewer::createTextures() {
  
@@ -83,12 +174,13 @@ void Viewer::createTextures() {
 
   
   // create three textures on the GPU
-  glGenTextures(3,_texIds);
+  glGenTextures(4,_texIds);
 
   // load and enable all textures (CPU side)
   enableTexture("textures/forest.jpg",_texIds[0]);
   enableTexture("textures/sol.jpg",_texIds[1]);
-  enableTexture("textures/snow.jpg",_texIds[2]);  
+  enableTexture("textures/snow.jpg",_texIds[2]);
+  //enableTexture("textures/water.jpg",_texIds[3]);  
 }
 
 void Viewer::enableTexture(const char * filename, int tex_id){
@@ -112,7 +204,7 @@ void Viewer::enableTexture(const char * filename, int tex_id){
 }
 
 void Viewer::deleteTextures() {
-  glDeleteTextures(3,_texIds);
+  glDeleteTextures(4,_texIds);
 }
 
 //Helper to send a texture to graphic card
@@ -122,8 +214,20 @@ void Viewer::sendTexture(const char * varname, int texid,GLenum texture, GLuint 
   glUniform1i(glGetUniformLocation(shader_id,varname),texid);
 }
 
-#define STEP 0.01
+/***
+ * DRAWERS
+ *
+ */
+
 void Viewer::drawScene(GLuint id) {
+
+  const float size = 10.0;
+  const glm::vec3 l   = glm::transpose(_cam->normalMatrix())*_light;
+  const glm::mat4 p   = glm::ortho<float>(-size,size,-size,size,-size,2*size);
+  const glm::mat4 v   = glm::lookAt(l, glm::vec3(0,0,0), glm::vec3(0,1,0));
+  const glm::mat4 m   = glm::mat4(1.0);
+  const glm::mat4 mv  = v*m;
+  const glm::mat4 mvpDepth = p*mv;
 
   // send uniform variables 
   glUniformMatrix4fv(glGetUniformLocation(id,"mdvMat"),1,GL_FALSE,&(_cam->mdvMatrix()[0][0]));
@@ -140,6 +244,16 @@ void Viewer::drawScene(GLuint id) {
   sendTexture("forest",0,GL_TEXTURE0,id);
   sendTexture("sol",1,GL_TEXTURE1,id);
   sendTexture("snow",2,GL_TEXTURE2,id);
+  //sendTexture("water",3,GL_TEXTURE3,id);
+
+  
+  
+  glUniformMatrix4fv(glGetUniformLocation(id,"mvpDepthMat"),1,GL_FALSE,&mvpDepth[0][0]);
+  
+  glActiveTexture(GL_TEXTURE3);
+  glBindTexture(GL_TEXTURE_2D,_texDepth);
+  glUniform1i(glGetUniformLocation(id,"shadowmap"),3);
+
   // draw faces 
   glBindVertexArray(_vaoTerrain);
   glDrawElements(GL_TRIANGLES,3*_grid->nbFaces(),GL_UNSIGNED_INT,(void *)0);
@@ -147,7 +261,73 @@ void Viewer::drawScene(GLuint id) {
   _time += 0.01;
 }
 
+void Viewer::drawSceneFromLight(GLuint id) {
+
+  const float size = 10.0;
+  const glm::vec3 l   = glm::transpose(_cam->normalMatrix())*_light;
+  const glm::mat4 p   = glm::ortho<float>(-size,size,-size,size,-size,2*size);
+  const glm::mat4 v   = glm::lookAt(l, glm::vec3(0,0,0), glm::vec3(0,1,0));
+  const glm::mat4 m   = glm::mat4(1.0);
+  const glm::mat4 mv  = v*m;
+  const glm::mat4 mvp = p*mv;
+  
+  glBindVertexArray(_vaoTerrain);
+  
+  glUniform3fv(glGetUniformLocation(id,"motion"),1,&(_motion[0]));
+  //Water parameters
+  glUniform1f(glGetUniformLocation(id,"water_low"),-0.5);
+  glUniformMatrix4fv(glGetUniformLocation(id,"mvpMat"),1,GL_FALSE,&mvp[0][0]);
+
+  
+  glDrawElements(GL_TRIANGLES,3*_grid->nbFaces(),GL_UNSIGNED_INT,(void *)0);
+
+  // disable VAO
+  glBindVertexArray(0);
+}
+
+void Viewer::drawShadowMap(GLuint id) {
+  // send depth texture 
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D,_texDepth);
+  glUniform1i(glGetUniformLocation(id,"shadowmap"),0);
+
+    // draw the quad 
+  glBindVertexArray(_vaoQuad);
+  glDrawArrays(GL_TRIANGLES,0,6);
+  // disable VAO
+  glBindVertexArray(0);
+}
+
+/***
+ * GL THINGS
+ *
+ */
+
 void Viewer::paintGL() {
+
+  /*** SHADOW MAPPING HERE **/
+  // activate the created framebuffer object
+  glBindFramebuffer(GL_FRAMEBUFFER,_fbo);
+
+  // we only want to write in the depth texture (automatic thanks to the depth OpenGL test)
+  glDrawBuffer(GL_NONE);
+
+  // set the viewport at the good texture resolution
+  glViewport(0,0,_depthResol,_depthResol);
+
+  // clear depth buffer 
+  glClear(GL_DEPTH_BUFFER_BIT);
+
+  // activate the shadow map shader
+  glUseProgram(_shadowMapShader->id());
+
+  // create the shadow map 
+  drawSceneFromLight(_shadowMapShader->id());
+
+  // desactivate fbo
+  glBindFramebuffer(GL_FRAMEBUFFER,0);
+
+  /** END OF SHADOW MAPPING HERE ***/
   
   // allow opengl depth test 
   glEnable(GL_DEPTH_TEST);
@@ -164,8 +344,17 @@ void Viewer::paintGL() {
   // generate the map
   drawScene(_terrainShader->id());
 
-  // disable depth test 
-  glDisable(GL_DEPTH_TEST);
+    // show the shadow map (press S key) 
+  if(_showShadowMap) {
+    // activate the test shader  
+    glUseProgram(_debugMapShader->id());
+
+    // clear buffers 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // display the shadow map 
+    drawShadowMap(_debugMapShader->id());
+  }
 
   // disable shader 
   glUseProgram(0);
@@ -176,6 +365,57 @@ void Viewer::resizeGL(int width,int height) {
   glViewport(0,0,width,height);
   updateGL();
 }
+
+void Viewer::initializeGL() {
+  // make this window the current one
+  makeCurrent();
+
+  // init and chack glew
+  if(glewInit()!=GLEW_OK) {
+    cerr << "Warning: glewInit failed!" << endl;
+  }
+
+  if(!GLEW_ARB_vertex_program   ||
+     !GLEW_ARB_fragment_program ||
+     !GLEW_ARB_texture_float    ||
+     !GLEW_ARB_draw_buffers     ||
+     !GLEW_ARB_framebuffer_object) {
+    cerr << "Warning: Shaders not supported!" << endl;
+  }
+
+  // init OpenGL settings
+  glClearColor(0.0,0.0,0.0,1.0);
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_TEXTURE_2D);
+  glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+  glViewport(0,0,width(),height());
+
+  // initialize camera
+  _cam->initialize(width(),height(),true);
+
+  // init shaders 
+  createShaders();
+
+  // init VAO/VBO
+  createVAO();
+
+  //create and load texture
+  createTextures();
+
+  // init create FBO
+  createFBO();
+  initFBO();
+
+  // starts the timer 
+  //_timer->start();
+}
+
+
+
+/***
+ * EVENT THINGS
+ *
+ */
 
 void Viewer::mousePressEvent(QMouseEvent *me) {
   const glm::vec2 p((float)me->x(),(float)(height()-me->y()));
@@ -216,6 +456,7 @@ void Viewer::mouseMoveEvent(QMouseEvent *me) {
 
 void Viewer::keyPressEvent(QKeyEvent *ke) {
   const float step = 0.05;
+  _time-=0.01;
   if(ke->key()==Qt::Key_Z) {
     glm::vec2 v = glm::vec2(glm::transpose(_cam->normalMatrix())*glm::vec3(0,0,-1))*step;
     if(v[0]!=0.0 && v[1]!=0.0) v = glm::normalize(v)*step;
@@ -237,11 +478,11 @@ void Viewer::keyPressEvent(QKeyEvent *ke) {
   }
 
   if(ke->key()==Qt::Key_Q) {
-    _motion[2] += step;
+    _motion[1] += step;
   }
 
   if(ke->key()==Qt::Key_D) {
-    _motion[2] -= step;
+    _motion[1] -= step;
   }
 
   
@@ -280,44 +521,10 @@ void Viewer::keyPressEvent(QKeyEvent *ke) {
     reloadShaders();
   }
 
+  if(ke->key()==Qt::Key_O) {
+    _showShadowMap = !_showShadowMap;
+  }
+
   updateGL();
-}
-
-void Viewer::initializeGL() {
-  // make this window the current one
-  makeCurrent();
-
-  // init and chack glew
-  if(glewInit()!=GLEW_OK) {
-    cerr << "Warning: glewInit failed!" << endl;
-  }
-
-  if(!GLEW_ARB_vertex_program   ||
-     !GLEW_ARB_fragment_program ||
-     !GLEW_ARB_texture_float    ||
-     !GLEW_ARB_draw_buffers     ||
-     !GLEW_ARB_framebuffer_object) {
-    cerr << "Warning: Shaders not supported!" << endl;
-  }
-
-  // init OpenGL settings
-  glClearColor(0.0,0.0,0.0,1.0);
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_TEXTURE_2D);
-  glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
-  glViewport(0,0,width(),height());
-
-  // initialize camera
-  _cam->initialize(width(),height(),true);
-
-  // init shaders 
-  createShaders();
-
-  // init VAO/VBO
-  createVAO();
-  createTextures();
-
-  // starts the timer 
-  //_timer->start();
 }
 

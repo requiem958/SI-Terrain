@@ -26,11 +26,11 @@
 #include "grid.h"
 
 class Viewer : public QGLWidget {
- public:
+public:
   Viewer(char *filename,const QGLFormat &format=QGLFormat::defaultFormat());
   ~Viewer();
   
- protected :
+protected :
   virtual void paintGL();
   virtual void initializeGL();
   virtual void resizeGL(int width,int height);
@@ -38,7 +38,7 @@ class Viewer : public QGLWidget {
   virtual void mousePressEvent(QMouseEvent *me);
   virtual void mouseMoveEvent(QMouseEvent *me);
 
- private:
+private:
   // OpenGL objects creation
   void createVAO();
   void deleteVAO();
@@ -55,9 +55,11 @@ class Viewer : public QGLWidget {
   void enableTexture(const char *filename, int tex_id);
   void deleteTextures();
   void sendTexture(const char * varname, int texid,GLenum texture, GLuint shader_id);
+
   // drawing functions 
   void drawScene(GLuint id);
-
+  void drawSceneFromLight(GLuint id);
+  void drawShadowMap(GLuint id) ;
   QTimer        *_timer;    // timer that controls the animation
 
   Grid   *_grid;   // the grid
@@ -67,21 +69,27 @@ class Viewer : public QGLWidget {
   float _time; //faire bouger la lumière selon le temps
   glm::vec3 _motion; // motion offset for the noise texture 
   bool      _mode;   // camera motion or light motion
+  bool _showShadowMap;
 
   // les shaders 
   Shader *_terrainShader;
-  //  Shader *_shaderFirstPass; // shader pour la géométrie fbo
-  // Shader *_shaderSecondPass; // shader pour la lumière
+  Shader *_shadowMapShader;
+  Shader *_debugMapShader;
   
   // vbo/vao ids 
   GLuint _vaoTerrain;
+  GLuint _vaoQuad;
+
   GLuint _terrain[2];
+  GLuint _quad;
+
 
   unsigned int _ndResol;
+  unsigned int _depthResol;
 
-  //GLuint _fbo;
-  //Gluint _rendColorId;
-   GLuint _texIds[3];
+  GLuint _fbo;
+  GLuint _texDepth;
+  GLuint _texIds[4];
 };
 
 #endif // VIEWER_H

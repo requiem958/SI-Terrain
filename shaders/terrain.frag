@@ -12,12 +12,15 @@ uniform float flow_high;
 uniform sampler2D forest;
 uniform sampler2D sol;
 uniform sampler2D snow;
+//uniform sampler2D water;
+uniform sampler2DShadow shadowmap;
 // in variables 
 
 in vec3  normalView;
 in vec3  eyeView;
 in vec3  p;
 in vec3 mpos;
+in vec4 shadcoord;
 in float flow_altitude;
 in float max_altitude;
 // out buffers 
@@ -28,7 +31,7 @@ void main() {
    vec3 ambient_haut  = texture(snow,mpos.xy).xyz;//vec3(1,1,1); //snow
    vec3 ambient_sol = texture(sol,mpos.xy).xyz;//vec3(0.36, 0.2, 0.09); //brown
    vec3 ambient_forest = texture(forest,mpos.xy).xyz;//vec3(0,1,0); //green
-   vec3 ambient_water = vec3(0,0,1); //blue
+   vec3 ambient_water = vec3(0,0,1); //blue //texture(water,mpos.xy).xyz;
 
   const vec3 diffuse  = vec3(0.3,0.5,0.8);
   const vec3 specular = vec3(0.8,0.2,0.2);
@@ -66,5 +69,14 @@ void main() {
   }
   vec3 color = a + diff*diffuse + spec*specular;
 
-  outColor = vec4(color,1.0);
+  float v = 1.0;
+  float b = 0.05;
+
+  v -= 0.8*(1.0-texture(shadowmap,vec3(shadcoord.xy,(shadcoord.z-b)/shadcoord.w)));
+  
+  //if ( texture( shadowmap,shadcoord.xy ).z  <shadcoord.z - b){
+  //  v = 0.5;
+  //}
+
+  outColor = vec4(v*color,1.0);
 }
