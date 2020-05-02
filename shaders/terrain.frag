@@ -27,6 +27,40 @@ in float max_altitude;
 
 layout(location = 0) out vec4 outColor;
 
+vec2 poissonDisk[16] = vec2[]( 
+vec2( -0.94201624, -0.39906216 ), 
+vec2( 0.94558609, -0.76890725 ), 
+vec2( -0.094184101, -0.92938870 ), 
+vec2( 0.34495938, 0.29387760 ), 
+vec2( -0.91588581, 0.45771432 ), 
+vec2( -0.81544232, -0.87912464 ), 
+vec2( -0.38277543, 0.27676845 ), 
+vec2( 0.97484398, 0.75648379 ), 
+vec2( 0.44323325, -0.97511554 ), 
+vec2( 0.53742981, -0.47373420 ), 
+vec2( -0.26496911, -0.41893023 ), 
+vec2( 0.79197514, 0.19090188 ), 
+vec2( -0.24188840, 0.99706507 ), 
+vec2( -0.81409955, 0.91437590 ), 
+vec2( 0.19984126, 0.78641367 ), 
+vec2( 0.14383161, -0.14100790 ) 
+);
+
+
+float shadow_percentage(){
+  float v = 1.0;
+  float b = 0.05;
+
+  int ind = 0;
+  vec2 coord;
+  for (ind = 0; ind < 20; ind++){
+    coord = shadcoord.xy+poissonDisk[ind]/100;
+    v -= 0.02*(1.0-texture(shadowmap,vec3(coord.xy,(shadcoord.z-b)/shadcoord.w)));
+  }
+  return v;
+}
+
+
 void main() {
    vec3 ambient_haut  = texture(snow,mpos.xy).xyz;//vec3(1,1,1); //snow
    vec3 ambient_sol = texture(sol,mpos.xy).xyz;//vec3(0.36, 0.2, 0.09); //brown
@@ -41,8 +75,6 @@ void main() {
   vec3 n = normalize(normalView);
   vec3 e = normalize(eyeView);
   vec3 l = normalize(light);
-  l.x += sin(2*time);
-  l = normalize(l);
   float diff = dot(l,n);
   float spec = pow(max(dot(reflect(l,n),e),0.0),et);
 
@@ -69,14 +101,8 @@ void main() {
   }
   vec3 color = a + diff*diffuse + spec*specular;
 
-  float v = 1.0;
-  float b = 0.05;
-
-  v -= 0.8*(1.0-texture(shadowmap,vec3(shadcoord.xy,(shadcoord.z-b)/shadcoord.w)));
-  
-  //if ( texture( shadowmap,shadcoord.xy ).z  <shadcoord.z - b){
-  //  v = 0.5;
-  //}
+  float v = shadow_percentage();
 
   outColor = vec4(v*color,1.0);
 }
+
