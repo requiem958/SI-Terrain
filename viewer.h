@@ -60,6 +60,7 @@ private:
   void drawScene(GLuint id);
   void drawSceneFromLight(GLuint id);
   void drawShadowMap(GLuint id) ;
+  void drawQuad();
   QTimer        *_timer;    // timer that controls the animation
 
   Grid   *_grid;   // the grid
@@ -75,6 +76,7 @@ private:
   Shader *_terrainShader;
   Shader *_shadowMapShader;
   Shader *_debugMapShader;
+  Shader *_shaderSecondPass;
   
   // vbo/vao ids 
   GLuint _vaoTerrain;
@@ -89,6 +91,7 @@ private:
 
   GLuint _fbo;
   GLuint _texDepth;
+  GLuint _texTerrain;
   GLuint _texIds[4];
 };
 

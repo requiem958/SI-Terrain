@@ -1,9 +1,9 @@
 #version 330
 
-out vec4 outBuffer;
+layout (location = 0) out vec4 outColor;
 
 uniform sampler2D shadowmap;
 
 void main() {
-  outBuffer = texelFetch(shadowmap,ivec2(gl_FragCoord.xy),0);
+  outColor = texelFetch(shadowmap,ivec2(gl_FragCoord.xy),0);
 }

@@ -48,7 +48,12 @@ void Viewer::createVAO() {
 
     // data associated with the screen quad
   const GLfloat quadData[] = { 
-    -1.0f,-1.0f,0.0f, 1.0f,-1.0f,0.0f, -1.0f,1.0f,0.0f, -1.0f,1.0f,0.0f, 1.0f,-1.0f,0.0f, 1.0f,1.0f,0.0f
+    -1.0f,-1.0f,0.0f,
+    1.0f,-1.0f,0.0f,
+    -1.0f,1.0f,0.0f,
+    -1.0f,1.0f,0.0f,
+    1.0f,-1.0f,0.0f,
+    1.0f,1.0f,0.0f
   }; 
   // cree les buffers associés au terrain 
 
@@ -94,7 +99,10 @@ void Viewer::createFBO() {
   // generate fbo and associated textures
   glGenFramebuffers(1,&_fbo);
   glGenTextures(1,&_texDepth);
+  glGenTextures(1,&_texTerrain);
+}
 
+void Viewer::initFBO(){
   // create the texture for rendering depth values
   glBindTexture(GL_TEXTURE_2D,_texDepth);
   glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT24,_depthResol,_depthResol,0,GL_DEPTH_COMPONENT,GL_FLOAT,NULL);
@@ -105,10 +113,20 @@ void Viewer::createFBO() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
 
+  // create the texture for rendering colors
+  glBindTexture(GL_TEXTURE_2D,_texTerrain);
+  glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F,width(),height(),0,GL_RGBA,GL_FLOAT,NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  
   // attach textures to framebuffer object 
   glBindFramebuffer(GL_FRAMEBUFFER,_fbo);
   glBindTexture(GL_TEXTURE_2D,_texDepth);
-  glFramebufferTexture2D(GL_FRAMEBUFFER_EXT,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,_texDepth,0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,_texDepth,0);
+  glBindTexture(GL_TEXTURE_2D,_texTerrain);
+  glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,_texTerrain,0);
 
   // test if everything is ok
   if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -118,13 +136,11 @@ void Viewer::createFBO() {
   glBindFramebuffer(GL_FRAMEBUFFER,0);
 }
 
-void Viewer::initFBO(){
-}
-
 void Viewer::deleteFBO() {
   // delete all FBO Ids
   glDeleteFramebuffers(1,&_fbo);
   glDeleteTextures(1,&_texDepth);
+  glDeleteTextures(1,&_texTerrain);
 }
 
 /***
@@ -136,20 +152,24 @@ void Viewer::createShaders() {
   _terrainShader = new Shader();
   _shadowMapShader = new Shader(); // will create the shadow map
   _debugMapShader = new Shader();
+  _shaderSecondPass = new Shader();
 
   _terrainShader->load("shaders/terrain.vert","shaders/terrain.frag");
   _shadowMapShader->load("shaders/shadow-map.vert","shaders/shadow-map.frag");
   _debugMapShader->load("shaders/show-shadow-map.vert","shaders/show-shadow-map.frag");
+  _shaderSecondPass->load("shaders/second-pass.vert","shaders/second-pass.frag");
 }
 
 void Viewer::deleteShaders() {
   delete _terrainShader;
   delete _shadowMapShader;
   delete _debugMapShader;
+  delete _shaderSecondPass;
 
   _terrainShader = NULL;
   _shadowMapShader = NULL;
   _debugMapShader = NULL;
+  _shaderSecondPass = NULL;
 }
 
 void Viewer::reloadShaders() {
@@ -159,6 +179,8 @@ void Viewer::reloadShaders() {
     _shadowMapShader->reload("shaders/shadow-map.vert","shaders/shadow-map.frag");
   if(_debugMapShader)
     _debugMapShader->reload("shaders/show-shadow-map.vert","shaders/show-shadow-map.frag");
+  if(_shaderSecondPass)
+    _shaderSecondPass->reload("shaders/second-pass.vert","shaders/second-pass.frag");
 }
 
 /***
@@ -290,11 +312,13 @@ void Viewer::drawShadowMap(GLuint id) {
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D,_texDepth);
   glUniform1i(glGetUniformLocation(id,"shadowmap"),0);
+}
 
-    // draw the quad 
+void Viewer::drawQuad() {
+
+  // Draw the 2 triangles !
   glBindVertexArray(_vaoQuad);
   glDrawArrays(GL_TRIANGLES,0,6);
-  // disable VAO
   glBindVertexArray(0);
 }
 
@@ -306,7 +330,7 @@ void Viewer::drawShadowMap(GLuint id) {
 void Viewer::paintGL() {
 
   /*** SHADOW MAPPING HERE **/
-  // activate the created framebuffer object
+
   glBindFramebuffer(GL_FRAMEBUFFER,_fbo);
 
   // we only want to write in the depth texture (automatic thanks to the depth OpenGL test)
@@ -328,7 +352,11 @@ void Viewer::paintGL() {
   glBindFramebuffer(GL_FRAMEBUFFER,0);
 
   /** END OF SHADOW MAPPING HERE ***/
-  
+
+  glBindFramebuffer(GL_FRAMEBUFFER,_fbo);
+  // Set the list of draw buffers.
+  GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+  glDrawBuffers(1, DrawBuffers);
   // allow opengl depth test 
   glEnable(GL_DEPTH_TEST);
   
@@ -344,7 +372,8 @@ void Viewer::paintGL() {
   // generate the map
   drawScene(_terrainShader->id());
 
-    // show the shadow map (press S key) 
+  glBindFramebuffer(GL_FRAMEBUFFER,0);
+  // show the shadow map (press O key) 
   if(_showShadowMap) {
     // activate the test shader  
     glUseProgram(_debugMapShader->id());
@@ -354,8 +383,22 @@ void Viewer::paintGL() {
 
     // display the shadow map 
     drawShadowMap(_debugMapShader->id());
+  }else{
+
+    // activate the shader 
+    glUseProgram(_shaderSecondPass->id());
+    
+    // clear everything
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+      // send textures
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D,_texTerrain);
+    glUniform1i(glGetUniformLocation(_shaderSecondPass->id(),"colormap"),0);
   }
 
+  // Draw the triangles !
+  drawQuad();
   // disable shader 
   glUseProgram(0);
 }
