@@ -106,7 +106,7 @@ void main() {
   p = vec3(position.xy,h);
   
   gl_Position =  projMat*mdvMat*vec4(p,1.0);
-  shadcoord   = (mvpDepthMat*vec4(p,1.0))*0.5+vec4(0.5);
+  shadcoord   = mvpDepthMat*vec4(p,1.0)*0.5+vec4(0.5);
   normalView  = normalize(normalMat*n);
   eyeView     = normalize((mdvMat*vec4(p,1.0)).xyz);
 }

@@ -50,7 +50,7 @@ vec2( 0.14383161, -0.14100790 )
 
 float shadow_percentage(){
   float v = 1.0;
-  float b = 0.05;
+  float b = 0.005;
 
   int ind = 0;
   vec2 coord;
