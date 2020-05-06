@@ -13,7 +13,6 @@ uniform sampler2D forest;
 uniform sampler2D sol;
 uniform sampler2D snow;
 //uniform sampler2D water;
-uniform sampler2DShadow shadowmap;
 // in variables 
 
 in vec3  normalView;
@@ -26,6 +25,8 @@ in float max_altitude;
 // out buffers 
 
 layout(location = 0) out vec4 outColor;
+
+uniform sampler2DShadow shadowmap;
 
 vec2 poissonDisk[16] = vec2[]( 
 vec2( -0.94201624, -0.39906216 ), 

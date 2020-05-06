@@ -97,7 +97,7 @@ void Viewer::deleteVAO() {
 
 void Viewer::createFBO() {
   // generate fbo and associated textures
-  glGenFramebuffers(1,&_fbo);
+  glGenFramebuffers(2,&(_fbo[0]));
   glGenTextures(1,&_texDepth);
   glGenTextures(1,&_texTerrain);
 }
@@ -122,9 +122,15 @@ void Viewer::initFBO(){
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   
   // attach textures to framebuffer object 
-  glBindFramebuffer(GL_FRAMEBUFFER,_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER,_fbo[0]);
   glBindTexture(GL_TEXTURE_2D,_texDepth);
   glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,_texDepth,0);
+
+    // test if everything is ok
+  if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    cout << "Warning: FBO not complete!" << endl;
+
+  glBindFramebuffer(GL_FRAMEBUFFER,_fbo[1]);
   glBindTexture(GL_TEXTURE_2D,_texTerrain);
   glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,_texTerrain,0);
 
@@ -138,7 +144,7 @@ void Viewer::initFBO(){
 
 void Viewer::deleteFBO() {
   // delete all FBO Ids
-  glDeleteFramebuffers(1,&_fbo);
+  glDeleteFramebuffers(2,&(_fbo[0]));
   glDeleteTextures(1,&_texDepth);
   glDeleteTextures(1,&_texTerrain);
 }
@@ -293,17 +299,13 @@ void Viewer::drawSceneFromLight(GLuint id) {
   const glm::mat4 mv  = v*m;
   const glm::mat4 mvp = p*mv;
   
-  glBindVertexArray(_vaoTerrain);
-  
   glUniform3fv(glGetUniformLocation(id,"motion"),1,&(_motion[0]));
   //Water parameters
   glUniform1f(glGetUniformLocation(id,"water_low"),-0.5);
   glUniformMatrix4fv(glGetUniformLocation(id,"mvpMat"),1,GL_FALSE,&mvp[0][0]);
 
-  
+  glBindVertexArray(_vaoTerrain);
   glDrawElements(GL_TRIANGLES,3*_grid->nbFaces(),GL_UNSIGNED_INT,(void *)0);
-
-  // disable VAO
   glBindVertexArray(0);
 }
 
@@ -329,9 +331,11 @@ void Viewer::drawQuad() {
 
 void Viewer::paintGL() {
 
+  GLenum DrawBuffers[1];
   /*** SHADOW MAPPING HERE **/
 
-  glBindFramebuffer(GL_FRAMEBUFFER,_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER,_fbo[0]);
+
 
   // we only want to write in the depth texture (automatic thanks to the depth OpenGL test)
   glDrawBuffer(GL_NONE);
@@ -353,9 +357,9 @@ void Viewer::paintGL() {
 
   /** END OF SHADOW MAPPING HERE ***/
 
-  glBindFramebuffer(GL_FRAMEBUFFER,_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER,_fbo[1]);
   // Set the list of draw buffers.
-  GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+  DrawBuffers[0] = {GL_COLOR_ATTACHMENT0};
   glDrawBuffers(1, DrawBuffers);
   // allow opengl depth test 
   glEnable(GL_DEPTH_TEST);
@@ -383,8 +387,8 @@ void Viewer::paintGL() {
 
     // display the shadow map 
     drawShadowMap(_debugMapShader->id());
+    drawQuad();
   }else{
-
     // activate the shader 
     glUseProgram(_shaderSecondPass->id());
     
@@ -395,10 +399,9 @@ void Viewer::paintGL() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D,_texTerrain);
     glUniform1i(glGetUniformLocation(_shaderSecondPass->id(),"colormap"),0);
+    drawQuad();
+  
   }
-
-  // Draw the triangles !
-  drawQuad();
   // disable shader 
   glUseProgram(0);
 }
