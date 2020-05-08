@@ -89,9 +89,13 @@ private:
   unsigned int _ndResol;
   unsigned int _depthResol;
 
+  //FBO things
   GLuint _fbo[2];
   GLuint _texDepth;
   GLuint _texTerrain;
+  GLuint _texNormal;
+
+  //Textures for objects
   GLuint _texIds[4];
 };
 

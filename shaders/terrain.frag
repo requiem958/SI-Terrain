@@ -12,7 +12,6 @@ uniform float flow_high;
 uniform sampler2D forest;
 uniform sampler2D sol;
 uniform sampler2D snow;
-//uniform sampler2D water;
 // in variables 
 
 in vec3  normalView;
@@ -22,9 +21,11 @@ in vec3 mpos;
 in vec4 shadcoord;
 in float flow_altitude;
 in float max_altitude;
+in float depth;
 // out buffers 
 
 layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outDepth;
 
 uniform sampler2DShadow shadowmap;
 
@@ -79,7 +80,7 @@ void main() {
   float diff = dot(l,n);
   float spec = pow(max(dot(reflect(l,n),e),0.0),et);
 
-  vec3 a = vec3(0);;
+  vec3 a = vec3(0);
 
   float altitude = p.z;
   const float division = 4.0;
@@ -104,6 +105,9 @@ void main() {
 
   float v = shadow_percentage();
 
+
   outColor = vec4(v*color,1.0);
+
+  outDepth = vec4(n,depth);
 }
 

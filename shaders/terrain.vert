@@ -27,6 +27,7 @@ out vec3 p; //Le vecteur position de chaque pixel
 out vec3 mpos; 
 out float flow_altitude; //hauteur des vagues
 out float max_altitude; //hauteur maximum des montagnes
+out float depth;
 
 // fonctions utiles pour créer des terrains en général
 vec2 hash(vec2 p) {
@@ -109,4 +110,5 @@ void main() {
   shadcoord   = mvpDepthMat*vec4(p,1.0)*0.5+vec4(0.5);
   normalView  = normalize(normalMat*n);
   eyeView     = normalize((mdvMat*vec4(p,1.0)).xyz);
+  depth       = -(mdvMat*vec4(position,1.0)).z/30.0;
 }

@@ -46,14 +46,14 @@ Viewer::~Viewer() {
 
 void Viewer::createVAO() {
 
-    // data associated with the screen quad
+  // data associated with the screen quad
   const GLfloat quadData[] = { 
-    -1.0f,-1.0f,0.0f,
-    1.0f,-1.0f,0.0f,
-    -1.0f,1.0f,0.0f,
-    -1.0f,1.0f,0.0f,
-    1.0f,-1.0f,0.0f,
-    1.0f,1.0f,0.0f
+			      -1.0f,-1.0f,0.0f,
+			      1.0f,-1.0f,0.0f,
+			      -1.0f,1.0f,0.0f,
+			      -1.0f,1.0f,0.0f,
+			      1.0f,-1.0f,0.0f,
+			      1.0f,1.0f,0.0f
   }; 
   // cree les buffers associés au terrain 
 
@@ -70,7 +70,7 @@ void Viewer::createVAO() {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,_terrain[1]); // indices 
   glBufferData(GL_ELEMENT_ARRAY_BUFFER,_grid->nbFaces()*3*sizeof(int),_grid->faces(),GL_STATIC_DRAW);
 
-    // create the VBO associated with the screen quad 
+  // create the VBO associated with the screen quad 
   glGenBuffers(1,&_quad);
   glBindVertexArray(_vaoQuad);
   glBindBuffer(GL_ARRAY_BUFFER,_quad);
@@ -113,26 +113,38 @@ void Viewer::initFBO(){
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
 
-  // create the texture for rendering colors
-  glBindTexture(GL_TEXTURE_2D,_texTerrain);
-  glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F,width(),height(),0,GL_RGBA,GL_FLOAT,NULL);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  
   // attach textures to framebuffer object 
   glBindFramebuffer(GL_FRAMEBUFFER,_fbo[0]);
   glBindTexture(GL_TEXTURE_2D,_texDepth);
   glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,_texDepth,0);
 
-    // test if everything is ok
+  // test if everything is ok
   if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     cout << "Warning: FBO not complete!" << endl;
 
+
+  // create the texture for rendering colors
+  glBindTexture(GL_TEXTURE_2D,_texTerrain);
+  glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F,width(),height(),0,GL_RGBA,GL_FLOAT,NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+
+  //create texture for rendering normal
+  glBindTexture(GL_TEXTURE_2D,_texNormal);
+  glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA32F,width(),height(),0,GL_RGBA,GL_FLOAT,NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  
   glBindFramebuffer(GL_FRAMEBUFFER,_fbo[1]);
   glBindTexture(GL_TEXTURE_2D,_texTerrain);
   glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,_texTerrain,0);
+  glBindTexture(GL_TEXTURE_2D,_texNormal);
+  glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT1,GL_TEXTURE_2D,_texNormal,0);
 
   // test if everything is ok
   if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -202,17 +214,16 @@ void Viewer::createTextures() {
 
   
   // create three textures on the GPU
-  glGenTextures(4,_texIds);
+  glGenTextures(3,_texIds);
 
   // load and enable all textures (CPU side)
   enableTexture("textures/forest.jpg",_texIds[0]);
   enableTexture("textures/sol.jpg",_texIds[1]);
   enableTexture("textures/snow.jpg",_texIds[2]);
-  //enableTexture("textures/water.jpg",_texIds[3]);  
 }
 
 void Viewer::enableTexture(const char * filename, int tex_id){
-   QImage texture = QGLWidget::convertToGLFormat(QImage(filename)); 
+  QImage texture = QGLWidget::convertToGLFormat(QImage(filename)); 
   // activate color texture
   glBindTexture(GL_TEXTURE_2D,tex_id);
 
@@ -272,7 +283,6 @@ void Viewer::drawScene(GLuint id) {
   sendTexture("forest",0,GL_TEXTURE0,id);
   sendTexture("sol",1,GL_TEXTURE1,id);
   sendTexture("snow",2,GL_TEXTURE2,id);
-  //sendTexture("water",3,GL_TEXTURE3,id);
 
   
   
@@ -331,12 +341,11 @@ void Viewer::drawQuad() {
 
 void Viewer::paintGL() {
 
-  GLenum DrawBuffers[1];
+
+
   /*** SHADOW MAPPING HERE **/
 
   glBindFramebuffer(GL_FRAMEBUFFER,_fbo[0]);
-
-
   // we only want to write in the depth texture (automatic thanks to the depth OpenGL test)
   glDrawBuffer(GL_NONE);
 
@@ -358,11 +367,12 @@ void Viewer::paintGL() {
   /** END OF SHADOW MAPPING HERE ***/
 
   glBindFramebuffer(GL_FRAMEBUFFER,_fbo[1]);
+
   // Set the list of draw buffers.
-  DrawBuffers[0] = {GL_COLOR_ATTACHMENT0};
-  glDrawBuffers(1, DrawBuffers);
+  GLenum DrawBuffers[] = {GL_COLOR_ATTACHMENT0,GL_COLOR_ATTACHMENT1};
+  glDrawBuffers(2, DrawBuffers);
   // allow opengl depth test 
-  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_DEPTH_TEST);  
   
   // screen viewport
   glViewport(0,0,width(),height());
@@ -389,16 +399,22 @@ void Viewer::paintGL() {
     drawShadowMap(_debugMapShader->id());
     drawQuad();
   }else{
-    // activate the shader 
-    glUseProgram(_shaderSecondPass->id());
-    
+
+    glViewport(0,0,width(),height());    
     // clear everything
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-      // send textures
+    // activate the shader 
+    glUseProgram(_shaderSecondPass->id());
+    // send textures
+
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D,_texTerrain);
     glUniform1i(glGetUniformLocation(_shaderSecondPass->id(),"colormap"),0);
+    
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D,_texNormal);
+    glUniform1i(glGetUniformLocation(_shaderSecondPass->id(),"normalmap"),1);
     drawQuad();
   
   }

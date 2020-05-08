@@ -1,18 +1,29 @@
 #version 330
 
-layout (location=0) out vec4 outColor;
+out vec4 bufferColor;
 
+uniform vec3      light;
+uniform sampler2D normalmap;
 uniform sampler2D colormap;
 
 in vec2 texcoord;
 
 vec4 shade(in vec2 coord) {
-  
-  float zoom = 2;
-  coord = zoom*mod(coord,1/zoom);//A commenter pour récupérer une vue normale
-  return texture(colormap,coord);
+  vec4  nd = texture(normalmap,coord,0);
+  vec3  c  = texture(colormap ,coord,0).xyz;
+
+    // on recupere ce qui se trouve dans le canal alpha (i.e. la profondeur)
+  // on peut le modifier eventuellement, puis on clampe les valeurs entre 0 et 1
+  float d = clamp(nd.w*1.5,0.0,1.0);
+  // couleur du brouillard
+  vec4 fogColor = vec4(0.8,0.75,0.76,1.0);
+  // on modifie la couleur avec la couleur du brouillard
+  // en fonction de la profondeur (simple interpolation lineaire ici)
+  return mix(vec4(c,1),fogColor,d);
 }
 
-void main() {  
-  outColor = shade(texcoord);
+void main() {
+  vec4 color = shade(texcoord);
+  
+  bufferColor = vec4(color);
 }

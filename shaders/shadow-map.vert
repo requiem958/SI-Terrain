@@ -63,21 +63,6 @@ float computeHeight(in vec2 p) {
     //return 0.2*cos(p.x+motion.x)*sin((p.x+motion.x)*30);
 }
 
-
-vec3 computeNormal(in vec2 p) {
-  const float EPS = 0.01;
-  const float SCALE = 2000.;
-  
-  vec2 g = vec2(computeHeight(p+vec2(EPS,0.))-computeHeight(p-vec2(EPS,0.)),
-		computeHeight(p+vec2(0.,EPS))-computeHeight(p-vec2(0.,EPS)))/2.*EPS;
-  
-  vec3 n1 = vec3(1.,0.,g.x*SCALE);
-  vec3 n2 = vec3(0.,1.,-g.y*SCALE);
-  vec3 n = normalize(cross(n1,n2));
-
-  return n;
-}
-
 void main() {
   float h = computeHeight(position.xy);
   
