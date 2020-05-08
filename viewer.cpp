@@ -118,6 +118,8 @@ void Viewer::initFBO(){
   glBindTexture(GL_TEXTURE_2D,_texDepth);
   glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,_texDepth,0);
 
+//TODO : ajouter un depth-component ici :
+- [x] //https://www.khronos.org/opengl/wiki/Depth_Test
   // test if everything is ok
   if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     cout << "Warning: FBO not complete!" << endl;
