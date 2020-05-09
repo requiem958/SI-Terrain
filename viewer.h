@@ -92,6 +92,7 @@ private:
   //FBO things
   GLuint _fbo[2];
   GLuint _texDepth;
+  GLuint _texDepthFBO2;
   GLuint _texTerrain;
   GLuint _texNormal;
 

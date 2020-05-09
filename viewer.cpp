@@ -118,12 +118,18 @@ void Viewer::initFBO(){
   glBindTexture(GL_TEXTURE_2D,_texDepth);
   glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,_texDepth,0);
 
-//TODO : ajouter un depth-component ici :
-- [x] //https://www.khronos.org/opengl/wiki/Depth_Test
   // test if everything is ok
   if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     cout << "Warning: FBO not complete!" << endl;
 
+  glBindTexture(GL_TEXTURE_2D,_texDepthFBO2);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_DEPTH_COMPONENT24,width(),height(),0,GL_DEPTH_COMPONENT,GL_FLOAT,NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);
 
   // create the texture for rendering colors
   glBindTexture(GL_TEXTURE_2D,_texTerrain);
@@ -147,6 +153,8 @@ void Viewer::initFBO(){
   glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,_texTerrain,0);
   glBindTexture(GL_TEXTURE_2D,_texNormal);
   glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT1,GL_TEXTURE_2D,_texNormal,0);
+  glBindTexture(GL_TEXTURE_2D,_texDepthFBO2);
+  glFramebufferTexture2D(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_TEXTURE_2D,_texDepthFBO2,0);
 
   // test if everything is ok
   if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -161,6 +169,8 @@ void Viewer::deleteFBO() {
   glDeleteFramebuffers(2,&(_fbo[0]));
   glDeleteTextures(1,&_texDepth);
   glDeleteTextures(1,&_texTerrain);
+  glDeleteTextures(1,&_texNormal);
+  glDeleteTextures(1,&_texDepthFBO2);
 }
 
 /***
@@ -401,8 +411,7 @@ void Viewer::paintGL() {
     drawShadowMap(_debugMapShader->id());
     drawQuad();
   }else{
-
-    glViewport(0,0,width(),height());    
+    glViewport(0,0,width(),height());
     // clear everything
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -426,6 +435,9 @@ void Viewer::paintGL() {
 
 void Viewer::resizeGL(int width,int height) {
   _cam->initialize(width,height,false);
+  deleteFBO();
+  createFBO();
+  initFBO();
   glViewport(0,0,width,height);
   updateGL();
 }
