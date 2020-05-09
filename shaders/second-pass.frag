@@ -12,6 +12,7 @@ vec4 shade(in vec2 coord) {
   vec4  nd = texture(normalmap,coord);
   vec3  c  = texture(colormap ,coord).xyz;
 
+  //return vec4(c,1); à décommenter pour tester sans fog
     // on recupere ce qui se trouve dans le canal alpha (i.e. la profondeur)
   // on peut le modifier eventuellement, puis on clampe les valeurs entre 0 et 1
   float d = clamp(nd.w*1.5,0.0,1.0);

@@ -353,7 +353,11 @@ void Viewer::drawQuad() {
 
 void Viewer::paintGL() {
 
-
+  if(_timer->isActive()) {
+    _time += 0.01;
+    _light[0] = sin(_time);
+    _light[1] = cos(_time);
+  }
 
   /*** SHADOW MAPPING HERE **/
 
@@ -532,7 +536,6 @@ void Viewer::mouseMoveEvent(QMouseEvent *me) {
 
 void Viewer::keyPressEvent(QKeyEvent *ke) {
   const float step = 0.05;
-  _time-=0.01;
   if(ke->key()==Qt::Key_Z) {
     glm::vec2 v = glm::vec2(glm::transpose(_cam->normalMatrix())*glm::vec3(0,0,-1))*step;
     if(v[0]!=0.0 && v[1]!=0.0) v = glm::normalize(v)*step;
