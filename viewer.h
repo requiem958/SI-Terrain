@@ -70,7 +70,9 @@ private:
   float _time; //faire bouger la lumière selon le temps
   glm::vec3 _motion; // motion offset for the noise texture 
   bool      _mode;   // camera motion or light motion
+  bool _fog;
   bool _showShadowMap;
+
 
   // les shaders 
   Shader *_terrainShader;

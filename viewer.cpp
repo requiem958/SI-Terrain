@@ -14,6 +14,7 @@ Viewer::Viewer(char *,const QGLFormat &format)
     _time(0.0),
     _motion(glm::vec3(0,0,0)),
     _mode(false),
+    _fog(false),
     _showShadowMap(false),
     _ndResol(512),
     _depthResol(1024){
@@ -418,14 +419,17 @@ void Viewer::paintGL() {
     glViewport(0,0,width(),height());
     // clear everything
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+    
     // activate the shader 
     glUseProgram(_shaderSecondPass->id());
+
+    glUniform1i(glGetUniformLocation(_shaderSecondPass->id(),"fog"),_fog);
     // send textures
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D,_texTerrain);
     glUniform1i(glGetUniformLocation(_shaderSecondPass->id(),"colormap"),0);
+
     
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D,_texNormal);
@@ -564,10 +568,6 @@ void Viewer::keyPressEvent(QKeyEvent *ke) {
     _motion[1] -= step;
   }
 
-  
-
-
-
   // key a: play/stop animation
   if(ke->key()==Qt::Key_A) {
     if(_timer->isActive()) 
@@ -579,6 +579,10 @@ void Viewer::keyPressEvent(QKeyEvent *ke) {
   // key i: init camera
   if(ke->key()==Qt::Key_I) {
     _cam->initialize(width(),height(),true);
+  }
+
+  if (ke->key()==Qt::Key_F){
+    _fog = !_fog;
   }
   
   // // key f: compute FPS

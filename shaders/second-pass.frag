@@ -6,6 +6,8 @@ uniform vec3      light;
 uniform sampler2D normalmap;
 uniform sampler2D colormap;
 
+uniform int fog;
+
 in vec2 texcoord;
 
 vec4 shade(in vec2 coord) {
@@ -13,14 +15,22 @@ vec4 shade(in vec2 coord) {
   vec3  c  = texture(colormap ,coord).xyz;
 
   //return vec4(c,1); à décommenter pour tester sans fog
-    // on recupere ce qui se trouve dans le canal alpha (i.e. la profondeur)
-  // on peut le modifier eventuellement, puis on clampe les valeurs entre 0 et 1
-  float d = clamp(nd.w*1.5,0.0,1.0);
+  
+  float density = 3.95;
+  const float LOG2 = 1.442695;
+  float z = nd.w;
+  float fogFactor = exp2( -density * 
+			  density *
+			  z *
+			  z *
+			  LOG2 );
+  fogFactor = clamp(fogFactor, 0.0, 1.0);
+  float d = 1-fogFactor;
   // couleur du brouillard
-  vec4 fogColor = vec4(0.8,0.75,0.76,1.0);
+  vec4 fogColor = vec4(0.8,0.8,0.8,1.0);
   // on modifie la couleur avec la couleur du brouillard
   // en fonction de la profondeur (simple interpolation lineaire ici)
-  return mix(vec4(c,1),fogColor,d);
+  return mix(vec4(c,1),fogColor,d*fog);
 }
 
 void main() {
