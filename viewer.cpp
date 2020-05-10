@@ -356,8 +356,8 @@ void Viewer::paintGL() {
 
   if(_timer->isActive()) {
     _time += 0.01;
-    _light[0] = sin(_time);
-    _light[1] = cos(_time);
+    _light[0] = sin(_time/2);
+    _light[1] = cos(_time/2);
   }
 
   /*** SHADOW MAPPING HERE **/

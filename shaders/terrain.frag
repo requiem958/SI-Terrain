@@ -3,32 +3,52 @@
 // input uniforms
 
 uniform vec3 light;
+
+//déplacement de la caméra
 uniform vec3 motion;
+
+
+
+//temps écoulé depuis le début du programme
 uniform float time;
-uniform float water_low; 
-uniform float flow_low; 
+
+//Hauteur la plus basse du terrain
+uniform float water_low;
+
+//Haut des vagues
+uniform float flow_low;
+//Bas des vagues
 uniform float flow_high; 
 
+//textures pour le terrain
 uniform sampler2D forest;
 uniform sampler2D sol;
 uniform sampler2D snow;
+uniform sampler2DShadow shadowmap;
 // in variables 
 
 in vec3  normalView;
 in vec3  eyeView;
 in vec3  p;
 in vec3 mpos;
-in vec4 shadcoord;
-in float flow_altitude;
-in float max_altitude;
 in float depth;
+
+//Coordonnées pour le shadow mapping
+in vec4 shadcoord;
+
+//Altitude des vagues
+in float flow_altitude;
+
+//Altitude maximum du terrain
+in float max_altitude;
+
+
 // out buffers 
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out vec4 outDepth;
 
-uniform sampler2DShadow shadowmap;
-
+// Pour le calcul d'ombres douces
 vec2 poissonDisk[16] = vec2[]( 
 vec2( -0.94201624, -0.39906216 ), 
 vec2( 0.94558609, -0.76890725 ), 
@@ -48,13 +68,16 @@ vec2( 0.19984126, 0.78641367 ),
 vec2( 0.14383161, -0.14100790 ) 
 );
 
-
+//Fonction pour calculer à quel point un point est dans l'ombre
 float shadow_percentage(){
   float v = 1.0;
   float b = 0.005;
 
   int ind = 0;
   vec2 coord;
+
+  //On fait du PCF avec des ombres douces
+  //Cela fait la superpostion de plusieurs ombres légérement décalées
   for (ind = 0; ind < 20; ind++){
     coord = shadcoord.xy+poissonDisk[ind]/100;
     v -= 0.02*(1.0-texture(shadowmap,vec3(coord.xy,(shadcoord.z-b)/shadcoord.w)));
@@ -64,10 +87,10 @@ float shadow_percentage(){
 
 
 void main() {
-   vec3 ambient_haut  = texture(snow,mpos.xy).xyz;//vec3(1,1,1); //snow
-   vec3 ambient_sol = texture(sol,mpos.xy).xyz;//vec3(0.36, 0.2, 0.09); //brown
-   vec3 ambient_forest = texture(forest,mpos.xy).xyz;//vec3(0,1,0); //green
-   vec3 ambient_water = vec3(0,0,1); //blue //texture(water,mpos.xy).xyz;
+   vec3 ambient_haut  = texture(snow,mpos.xy).xyz; //rochers
+   vec3 ambient_sol = texture(sol,mpos.xy).xyz;// sol près de la mer
+   vec3 ambient_forest = texture(forest,mpos.xy).xyz;//forets au milieu
+   vec3 ambient_water = vec3(0,0,1); //la mer
 
   const vec3 diffuse  = vec3(0.3,0.5,0.8);
   const vec3 specular = vec3(0.8,0.2,0.2);
@@ -83,6 +106,9 @@ void main() {
   vec3 a = vec3(0);
 
   float altitude = p.z;
+
+  //Constantes pour savoir comment on divise la hauteur du terrain
+  
   const float division = 4.0;
   const float min_foret = 0/division;
   const float max_foret = 1.0/division;
